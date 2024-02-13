@@ -29,6 +29,7 @@ async function run() {
     await client.connect();
 
     const userCollection = client.db("utility").collection("user");
+    const eventCollection = client.db("utility").collection("events");
 
     // Generate random secret key
     const generateSecretKey = () => {
