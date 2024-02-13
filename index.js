@@ -117,6 +117,75 @@ async function run() {
       }
     });
 
+    // Create an event
+    app.post("/events", async (req, res) => {
+      try {
+        const { title, description, start, end } = req.body;
+        const newEvent = { title, description, start, end };
+        const result = await eventCollection.insertOne(newEvent);
+        res.status(201).json({ message: "Event created successfully", id: result.insertedId });
+      } catch (error) {
+        res.status(500).json({ error: "Internal server error." });
+      }
+    });
+
+    // Get all events
+    app.get("/events", async (req, res) => {
+      try {
+        const events = await eventCollection.find({}).toArray();
+        res.json(events);
+      } catch (error) {
+        res.status(500).json({ error: "Internal server error." });
+      }
+    });
+
+    // Get a single event by ID
+    app.get("/events/:id", async (req, res) => {
+      try {
+        const eventId = req.params.id;
+        const event = await eventCollection.findOne({ _id: new MongoClient.ObjectId(eventId) });
+        if (!event) {
+          res.status(404).json({ error: "Event not found." });
+        } else {
+          res.json(event);
+        }
+      } catch (error) {
+        res.status(500).json({ error: "Internal server error." });
+      }
+    });
+
+    // Update an event
+    app.put("/events/:id", async (req, res) => {
+      try {
+        const eventId = req.params.id;
+        const { title, description, start, end } = req.body;
+        const updatedEvent = { title, description, start, end };
+        const result = await eventCollection.updateOne({ _id: new MongoClient.ObjectId(eventId) }, { $set: updatedEvent });
+        if (result.matchedCount === 0) {
+          res.status(404).json({ error: "Event not found." });
+        } else {
+          res.json({ message: "Event updated successfully" });
+        }
+      } catch (error) {
+        res.status(500).json({ error: "Internal server error." });
+      }
+    });
+
+    // Delete an event
+    app.delete("/events/:id", async (req, res) => {
+      try {
+        const eventId = req.params.id;
+        const result = await eventCollection.deleteOne({ _id: new MongoClient.ObjectId(eventId) });
+        if (result.deletedCount === 0) {
+          res.status(404).json({ error: "Event not found." });
+        } else {
+          res.json({ message: "Event deleted successfully" });
+        }
+      } catch (error) {
+        res.status(500).json({ error: "Internal server error." });
+      }
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
