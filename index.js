@@ -56,6 +56,7 @@ async function run() {
         }
 
         try {
+
           // Perform duplicate checks within the transaction:
           const existingUserByUsername = await userCollection.findOne({ username });
           const existingUserByEmail = await userCollection.findOne({ email });
@@ -65,28 +66,29 @@ async function run() {
             res.status(400).json({
               error: "Username already exists. Please choose a different username.",
             });
-
           } else if (existingUserByEmail) {
             // Email already exists
             res.status(400).json({
               error: "An account with this email already exists. Please use a different email.",
             });
           } else {
-            // Hash password and create new user object:
+            // Hash password and create new user object
             const hashedPassword = await bcrypt.hash(password, 10);
-            const newUser = { username, email, password: hashedPassword };
+            const newUser = {
+              username,
+              email,
+              role,
+              password: hashedPassword
+            };
 
             // Insert the new user within the transaction:
             await userCollection.insertOne(newUser);
 
             res.status(201).json({ message: "User created successfully" });
           }
-
         } catch (error) {
-
           res.status(500).json({ error: error.message });
         }
-
       } catch (error) {
         res.status(500).json({ error: error.message });
       }
