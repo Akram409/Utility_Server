@@ -5,12 +5,17 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const port = process.env.PORT || 5000;
 const crypto = require("crypto");
+const multer = require("multer");
+const path = require('path')
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { convertToPdf } = require("./converter/convertToPdf");
+const { ImageToPdf } = require("./converter/ImageToPdf");
+const { combinePDFs } = require("./converter/combinePDFs");
 
 const uri =
   "mongodb+srv://utility:3tlZoXzuxen1URBD@cluster0.6nxonq0.mongodb.net/?retryWrites=true&w=majority";
@@ -52,7 +57,8 @@ async function run() {
 
     app.post("/signup", async (req, res) => {
       try {
-        const { username, email, password } = req.body;
+        const { username, email, password,role } = req.body;
+        console.log(req.body)
         if (!username || !email || !password) {
           throw new Error("Username, email, and password are required");
         }
@@ -79,7 +85,7 @@ async function run() {
           } else {
             // Hash password and create new user object:
             const hashedPassword = await bcrypt.hash(password, 10);
-            const newUser = { username, email, password: hashedPassword };
+            const newUser = { username, email, password: hashedPassword,role: role };
 
             // Insert the new user within the transaction:
             await userCollection.insertOne(newUser);
@@ -138,7 +144,7 @@ async function run() {
         res.status(500).json({ error: "Internal server error." });
       }
     });
-    app.post("/notes/create", async (req, res) => {
+    app.post("/notes/create", async ( req, res) => {
       try {
         const { Title, Date, Description, Calendar, Tasks } = req.body;
         // Create a new note object
@@ -225,6 +231,7 @@ async function run() {
     });
     app.put("/notes/update/:id", async (req, res) => {
       const noteId = req.params.id;
+      console.log(noteId);
       const { Title, Date, Description, Calendar, Tasks } = req.body;
       const updatedNote = {
         Title,
@@ -237,6 +244,7 @@ async function run() {
         { _id: new ObjectId(noteId) },
         { $set: updatedNote }
       );
+      console.log(result);
       if (result.matchedCount === 0) {
         res.status(404).json({ error: "Note not found." });
       } else {
@@ -248,7 +256,7 @@ async function run() {
         const noteId = req.params.id;
         const { updatedTasks } = req.body;
         // Log the received data for debugging
-        console.log("Received data from client:", updatedTasks);
+        // console.log("Received data from client:", updatedTasks);
 
         // Ensure updatedTasks is not empty
         if (
@@ -268,7 +276,7 @@ async function run() {
         );
 
         // Log the result of the update operation
-        console.log("MongoDB update result:", result);
+        // console.log("MongoDB update result:", result);
 
         // Check if the document was found and updated
         if (result.matchedCount === 0) {
@@ -318,7 +326,7 @@ async function run() {
     app.delete("/user/delete/:id", async (req, res) => {
       try {
         const userId = req.params.id;
-        console.log(userId);
+        // console.log(userId);
         const result = await userCollection.deleteOne({
           _id: new ObjectId(userId),
         });
@@ -343,6 +351,87 @@ async function run() {
   }
 }
 run().catch(console.dir);
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    // console.log(file.mimetype);
+    return cb(null, "./public/allFile");
+  },
+  filename: function (req, file, cb) {
+    return cb(null, `${file.originalname}`);
+  },
+});
+
+const upload = multer({ storage });
+
+app.post("/converter/upload", upload.single("file"), async (req, res) => {
+  try {
+    const { path, mimetype } = req.file;
+    if (
+      mimetype ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      mimetype === "application/msword"
+    ) {
+      // Convert DOCX to PDF using the module
+      const pdfFileName = await convertToPdf(path);
+      console.log(pdfFileName)
+      res.status(200).json({ message: "Conversion successful", pdfFileName });
+    } else if (mimetype.startsWith("image/")) {
+      // Convert image to PDF using the imageToPdf function
+      const pdfFileName = await ImageToPdf(path);
+      res.status(200).json({ message: "Conversion successful", pdfFileName });
+    } else {
+      res.status(400).json({ error: "Unsupported file format" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+app.get("/converter/upload/download/DocxORImage",(req,res)=>{
+  res.download(path.resolve('./outputfile.pdf'))
+})
+
+const multiPdf = upload.fields([
+  { name: "file1", maxCount: 10 },
+  { name: "file2", maxCount: 10 },
+]);
+
+app.post("/converter/upload/combine", multiPdf, async (req, res) => {
+  try {
+    const { file1, file2 } = req.files;
+    if (!file1 || !file2) {
+      return res.status(400).json({ error: "Both files are required" });
+    }
+
+    const firstPdfPath = file1[0].path;
+    const secondPdfPath = file2[0].path;
+    const outputPath = "./public/combined.pdf"; // Output path for the combined PDF
+
+    // Combine the uploaded PDF files
+    await combinePDFs(firstPdfPath, secondPdfPath, outputPath);
+
+    // Send the combined PDF as a response
+    res.status(200).download(outputPath, "combined.pdf", (err) => {
+      if (err) {
+        console.error("Error downloading combined PDF:", err);
+        res.status(500).json({ error: "Internal server error" });
+      } else {
+        console.log("Combined PDF sent successfully");
+        // Optionally, you can delete the temporary PDF files after sending the response
+        // fs.unlinkSync(firstPdfPath);
+        // fs.unlinkSync(secondPdfPath);
+        // fs.unlinkSync(outputPath);
+      }
+    });
+  } catch (error) {
+    console.error("Error combining PDFs:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+app.get("/converter/upload/download/Combine",(req,res)=>{
+  res.download(path.resolve('./public/combined.pdf'))
+})
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
