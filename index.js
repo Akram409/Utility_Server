@@ -6,7 +6,7 @@ const bcrypt = require("bcrypt");
 const port = process.env.PORT || 5000;
 const crypto = require("crypto");
 const multer = require("multer");
-const path = require('path')
+const path = require("path");
 
 // Middleware
 app.use(cors());
@@ -55,10 +55,11 @@ async function run() {
       { unique: true, background: true }
     );
 
+    // POST
     app.post("/signup", async (req, res) => {
       try {
-        const { username, email, password,role } = req.body;
-        console.log(req.body)
+        const { username, email, password, role } = req.body;
+        console.log(req.body);
         if (!username || !email || !password) {
           throw new Error("Username, email, and password are required");
         }
@@ -85,7 +86,12 @@ async function run() {
           } else {
             // Hash password and create new user object:
             const hashedPassword = await bcrypt.hash(password, 10);
-            const newUser = { username, email, password: hashedPassword,role: role };
+            const newUser = {
+              username,
+              email,
+              password: hashedPassword,
+              role: role,
+            };
 
             // Insert the new user within the transaction:
             await userCollection.insertOne(newUser);
@@ -99,7 +105,6 @@ async function run() {
         res.status(500).json({ error: error.message });
       }
     });
-
     app.post("/login", async (req, res) => {
       try {
         const { email, password } = req.body;
@@ -129,8 +134,6 @@ async function run() {
         res.status(500).json({ error: "Internal server error." });
       }
     });
-
-    // Create an event
     app.post("/events", async (req, res) => {
       try {
         const { title, description, start, end } = req.body;
@@ -144,7 +147,7 @@ async function run() {
         res.status(500).json({ error: "Internal server error." });
       }
     });
-    app.post("/notes/create", async ( req, res) => {
+    app.post("/notes/create", async (req, res) => {
       try {
         const { Title, Date, Description, Calendar, Tasks } = req.body;
         // Create a new note object
@@ -172,8 +175,20 @@ async function run() {
         res.status(500).json({ error: "Internal server error." });
       }
     });
+    app.post("/user", async (req, res) => {
+      const user = req.body;
+      console.log(user);
+      const query = { email: user.email };
+      const existingUser = await userCollection.findOne(query);
 
-    // Get all events
+      if (existingUser) {
+        return res.send({ message: "user is already exists" });
+      }
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+
+    // Get
     app.get("/notes", async (req, res) => {
       try {
         const notes = await notesCollection.find().toArray();
@@ -210,23 +225,29 @@ async function run() {
       }
     });
 
-    // Update an event
-    app.put("/events/:id", async (req, res) => {
+    // Update
+    app.put("/user/update/:id", async (req, res) => {
       try {
-        const eventId = req.params.id;
-        const { title, description, start, end } = req.body;
-        const updatedEvent = { title, description, start, end };
-        const result = await eventCollection.updateOne(
-          { _id: new MongoClient.ObjectId(eventId) },
-          { $set: updatedEvent }
+        const userId = req.params.id;
+        const { newPassword } = req.body;
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update the user's password in the database
+        const result = await userCollection.updateOne(
+          { _id: new ObjectId(userId) },
+          { $set: { password: hashedPassword } }
         );
+
         if (result.matchedCount === 0) {
-          res.status(404).json({ error: "Event not found." });
+          res.status(404).json({ error: "User not found." });
         } else {
-          res.json({ message: "Event updated successfully" });
+          res.json({ message: "Password updated successfully" });
         }
       } catch (error) {
-        res.status(500).json({ error: "Internal server error." });
+        console.error("Error updating password:", error);
+        res.status(500).json({ error: "Internal server error" });
       }
     });
     app.put("/notes/update/:id", async (req, res) => {
@@ -292,7 +313,7 @@ async function run() {
       }
     });
 
-    // Delete an event
+    // Delete
     app.delete("/events/:id", async (req, res) => {
       try {
         const eventId = req.params.id;
@@ -374,7 +395,7 @@ app.post("/converter/upload", upload.single("file"), async (req, res) => {
     ) {
       // Convert DOCX to PDF using the module
       const pdfFileName = await convertToPdf(path);
-      console.log(pdfFileName)
+      console.log(pdfFileName);
       res.status(200).json({ message: "Conversion successful", pdfFileName });
     } else if (mimetype.startsWith("image/")) {
       // Convert image to PDF using the imageToPdf function
@@ -388,9 +409,9 @@ app.post("/converter/upload", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-app.get("/converter/upload/download/DocxORImage",(req,res)=>{
-  res.download(path.resolve('./outputfile.pdf'))
-})
+app.get("/converter/upload/download/DocxORImage", (req, res) => {
+  res.download(path.resolve("./outputfile.pdf"));
+});
 
 const multiPdf = upload.fields([
   { name: "file1", maxCount: 10 },
@@ -429,9 +450,9 @@ app.post("/converter/upload/combine", multiPdf, async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-app.get("/converter/upload/download/Combine",(req,res)=>{
-  res.download(path.resolve('./public/combined.pdf'))
-})
+app.get("/converter/upload/download/Combine", (req, res) => {
+  res.download(path.resolve("./public/combined.pdf"));
+});
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
