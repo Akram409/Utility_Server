@@ -1,0 +1,62 @@
+  [
+      {
+        "Title": "Team Meeting",
+        "Date": "2024/02/14",
+        "Description": "Discuss project updates and assign tasks for the upcoming week.",
+        "Calendar": true,
+        "Tasks": [
+          {
+            "title": "Review progress",
+            "task": "Discuss individual team member progress."
+          }
+        ]
+      },
+    {
+      "Title": "Client Presentation",
+      "Date": "2024/02/17",
+      "Description": "Deliver a presentation to the client showcasing the latest product features.",
+      "Calendar": true,
+      "Tasks": [
+        {
+          "title": "Prepare slides",
+          "task": "Create and finalize presentation slides."
+        }
+      ]
+    },
+    {
+      "Title": "Product Demo",
+      "Date": "2024/02/20",
+      "Description": "Demonstrate the product features to potential clients.",
+      "Calendar": true,
+      "Tasks": [
+        {
+          "title": "Prepare demo environment",
+          "task": "Set up the environment for the product demo."
+        }
+      ]
+    },
+    {
+      "Title": "Software Release",
+      "Date": "2024/02/25",
+      "Description": "Release the latest version of the software to clients.",
+      "Calendar": true,
+      "Tasks": [
+        {
+          "title": "Perform final testing",
+          "task": "Conduct comprehensive testing to ensure software stability."
+        }
+      ]
+    },
+    {
+      "Title": "Marketing Campaign Launch",
+      "Date": "2024/03/01",
+      "Description": "Launch a new marketing campaign to increase brand awareness.",
+      "Calendar": true,
+      "Tasks": [
+        {
+          "title": "Finalize creative assets",
+          "task": "Ensure all marketing materials are ready for launch."
+        }
+      ]
+    }
+  ]
