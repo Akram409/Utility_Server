@@ -45,6 +45,27 @@ async function run() {
 
     const secretKey = generateSecretKey();
 
+    // Middleware to verify JWT token
+    const verifyToken = (req, res, next) => {
+      // Get the token from the request headers or body
+      const token = req.headers.authorization?.split(" ")[1] || req.body.token;
+
+      if (!token) {
+        return res.status(401).json({ error: "No token provided" });
+      }
+
+      // Verify the token
+      jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+          return res.status(403).json({ error: "Invalid token" });
+        }
+        // Token is valid, attach decoded user information to the request object
+        req.user = decoded;
+        next(); // Call the next middleware
+      });
+    };
+
+
     // Use unique indexes for username and email to prevent duplicates
     await userCollection.createIndex(
       { username: 1 },
@@ -93,7 +114,6 @@ async function run() {
               role: role,
             };
 
-            // Insert the new user within the transaction:
             await userCollection.insertOne(newUser);
 
             res.status(201).json({ message: "User created successfully" });
@@ -105,6 +125,12 @@ async function run() {
         res.status(500).json({ error: error.message });
       }
     });
+
+    // Route to verify token
+    app.post("/verifyToken", verifyToken, (req, res) => {
+      res.status(200).json({ message: "Token is valid" });
+    });
+
     app.post("/login", async (req, res) => {
       try {
         const { email, password } = req.body;
@@ -123,7 +149,6 @@ async function run() {
           return; // Prevent duplicate error message in case both conditions are met
         }
 
-        // Generate and send the token with only necessary data:
         const token = jwt.sign(
           { id: user._id, email, role: user.role },
           secretKey,
@@ -134,6 +159,7 @@ async function run() {
         res.status(500).json({ error: "Internal server error." });
       }
     });
+
     app.post("/events", async (req, res) => {
       try {
         const { title, description, start, end } = req.body;
