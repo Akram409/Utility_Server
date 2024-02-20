@@ -11,15 +11,14 @@ const path = require("path");
 // Middleware
 app.use(cors());
 app.use(express.json());
+require('dotenv').config();
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const { convertToPdf } = require("./converter/convertToPdf");
 const { ImageToPdf } = require("./converter/ImageToPdf");
 const { combinePDFs } = require("./converter/combinePDFs");
 
-const uri =
-  "mongodb+srv://utility:3tlZoXzuxen1URBD@cluster0.6nxonq0.mongodb.net/?retryWrites=true&w=majority";
-// "mongodb+srv://utility:3tlZoXzuxen1URBD@cluster0.coipt.mongodb.net/?retryWrites=true&w=majority";
+const uri = process.env.DB_URI
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -29,6 +28,7 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
 async function run() {
   try {
     // Connect the client to the server (optional starting in v4.7)
@@ -173,6 +173,7 @@ async function run() {
         res.status(500).json({ error: "Internal server error." });
       }
     });
+
     app.post("/notes/create", async (req, res) => {
       try {
         const { Title, Date, Description, Calendar, Tasks } = req.body;
@@ -201,6 +202,7 @@ async function run() {
         res.status(500).json({ error: "Internal server error." });
       }
     });
+
     app.post("/user", async (req, res) => {
       const user = req.body;
       console.log(user);
