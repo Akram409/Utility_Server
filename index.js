@@ -98,6 +98,7 @@ async function run() {
               error:
                 "Username already exists. Please choose a different username.",
             });
+
           } else if (existingUserByEmail) {
             // Email already exists
             res.status(400).json({
@@ -114,9 +115,9 @@ async function run() {
               role: role,
             };
 
-            await userCollection.insertOne(newUser);
+            const data = await userCollection.insertOne(newUser);
 
-            res.status(201).json({ message: "User created successfully" });
+            res.status(201).json({ message: "User created successfully", data });
           }
         } catch (error) {
           res.status(500).json({ error: error.message });
@@ -225,10 +226,21 @@ async function run() {
         res.status(500).json({ error: "Internal server error." });
       }
     });
+
     app.get("/user", async (req, res) => {
       try {
         const user = await userCollection.find().toArray();
         res.json(user);
+      } catch (error) {
+        res.status(500).json({ error: "Internal server error." });
+      }
+    });
+
+    app.get("/user/:email", async (req, res) => {
+      try {
+        const email = req.params.email
+        const user = await userCollection.findOne({ email })
+        res.status(200).json({ user });
       } catch (error) {
         res.status(500).json({ error: "Internal server error." });
       }
@@ -278,6 +290,7 @@ async function run() {
         res.status(500).json({ error: "Internal server error" });
       }
     });
+
     app.put("/notes/update/:id", async (req, res) => {
       const noteId = req.params.id;
       console.log(noteId);
